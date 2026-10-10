@@ -1,4 +1,34 @@
 #!/usr/bin/env bash
+
+# ==========================================
+# 新增：自动测试订阅源，失败则跳过
+# ==========================================
+echo "开始检测订阅源可用性..."
+VALID_URLS=""
+for url in $SUBSCRIPTION_URLS; do
+  # 发送请求测试链接，超时设为10秒，只看状态码是否正常
+  HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 -L "$url")
+  
+  if [ "$HTTP_CODE" -eq 200 ]; then
+    echo "✅ 源可用: $url"
+    VALID_URLS="$VALID_URLS$url\n"
+  else
+    echo "❌ 源失效或超时 (HTTP $HTTP_CODE)，已跳过: $url"
+  fi
+done
+
+# 将过滤后的有效地址重新赋值给原变量，后面的代码就会使用可用源了
+export SUBSCRIPTION_URLS=$(echo -e "$VALID_URLS" | sed '/^\s*$/d')
+
+if [ -z "$SUBSCRIPTION_URLS" ]; then
+  echo "❌ 所有订阅源均失效，脚本终止。"
+  exit 1
+fi
+echo "检测完毕，开始构建..."
+# ==========================================
+
+
+
 # [INPUT]: GitHub Actions Secrets、公共 subconverter 服务与 GitHub Gist API
 # [OUTPUT]: 对外更新指定私有 Gist 的完整 Clash Meta 配置
 # [POS]: scripts 的容错发布编排器，通过公共 subconverter 跳过失效订阅并保护最后可用的 Gist
