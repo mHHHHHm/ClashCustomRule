@@ -28,24 +28,19 @@ echo "开始上传至 Gist..."
 GIST_FILENAME="${GIST_FILENAME:-clash-meta.yaml}"
 GIST_DESCRIPTION="Clash Meta config generated at $(date -u +"%Y-%m-%d %H:%M:%S UTC")"
 
-# 构造 JSON payload
-PAYLOAD=$(jq -n \
+# 使用临时文件构造 JSON payload，避免参数过长
+PAYLOAD_FILE=$(mktemp)
+jq -n \
   --arg desc "$GIST_DESCRIPTION" \
   --arg filename "$GIST_FILENAME" \
-  --arg content "$(cat clash-meta.yaml)" \
-  '{description: $desc, files: {($filename): {content: $content}}}')
+  --rawfile content clash-meta.yaml \
+  '{description: $desc, files: {($filename): {content: $content}}}' > "$PAYLOAD_FILE"
 
-# 调用 GitHub API 更新 Gist
+# 调用 GitHub API 更新 Gist，从文件读取 payload
 RESPONSE=$(curl -s -X PATCH \
   -H "Authorization: token $GIST_TOKEN" \
   -H "Accept: application/vnd.github.v3+json" \
-  -d "$PAYLOAD" \
+  -d @"$PAYLOAD_FILE" \
   "https://api.github.com/gists/$GIST_ID")
 
-if echo "$RESPONSE" | grep -q '"id"'; then
-  echo "✅ Gist 更新成功！"
-else
-  echo "❌ Gist 更新失败！"
-  echo "$RESPONSE"
-  exit 1
-fi
+rm -f "$PAYLOAD_FILE"
