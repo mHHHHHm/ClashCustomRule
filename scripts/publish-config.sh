@@ -5,11 +5,17 @@
 # ==========================================
 echo "开始检测订阅源可用性..."
 VALID_URLS=""
-for url in $SUBSCRIPTION_URLS; do
-  # 发送请求测试链接，超时设为10秒，只看状态码是否正常
-  HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 -L "$url")
+# 使用 IFS 循环遍历，避免换行符带来的解析问题
+for url in $(echo -e "$SUBSCRIPTION_URLS"); do
+  # 发送请求测试链接，超时设为10秒，无视 SSL 错误
+  HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 -k -L "$url" 2>/dev/null)
   
-  if [ "$HTTP_CODE" -eq 200 ]; then
+  # 为空时给予默认值，防止 integer expression expected
+  if [ -z "$HTTP_CODE" ]; then
+    HTTP_CODE="000"
+  fi
+  
+  if [ "$HTTP_CODE" = "200" ]; then
     echo "✅ 源可用: $url"
     VALID_URLS="$VALID_URLS$url\n"
   else
@@ -17,7 +23,7 @@ for url in $SUBSCRIPTION_URLS; do
   fi
 done
 
-# 将过滤后的有效地址重新赋值给原变量，后面的代码就会使用可用源了
+# 将过滤后的有效地址重新赋值给原变量
 export SUBSCRIPTION_URLS=$(echo -e "$VALID_URLS" | sed '/^\s*$/d')
 
 if [ -z "$SUBSCRIPTION_URLS" ]; then
@@ -26,7 +32,6 @@ if [ -z "$SUBSCRIPTION_URLS" ]; then
 fi
 echo "检测完毕，开始构建..."
 # ==========================================
-
 
 
 # [INPUT]: GitHub Actions Secrets、公共 subconverter 服务与 GitHub Gist API
