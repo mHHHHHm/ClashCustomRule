@@ -50,4 +50,5 @@ jobs:
           GIST_TOKEN: ${{ secrets.GIST_TOKEN }}
           #SUBCONVERTER_URL: ${{ secrets.SUBCONVERTER_URL }}
           GIST_FILENAME: ${{ vars.GIST_FILENAME || 'clash-meta.yaml' }}
-        run: ./scripts/publish-config.sh
+        #run: ./scripts/publish-config.sh
+        run: ./scripts/local_merge.sh
